@@ -1,15 +1,7 @@
 #define PHONG
 
-// struct ShadowMatrices {
-// 	mat4x4 view;
-// 	mat4x4 projection;
-// };
-
-// uniform ShadowMatrices customShadowMatrices;
-
 out vec3 vViewPosition;
 out vec3 vWorldPosition;
-// varying vec2 vSampleShadowPosition;
 
 #ifndef FLAT_SHADED
 	out vec3 vNormal;

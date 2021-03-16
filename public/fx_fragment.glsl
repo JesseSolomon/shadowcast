@@ -69,17 +69,27 @@ void main() {
 
 	#include <envmap_fragment>
 	
+	// Use the custom shadow matrices to project the fragment into the shadow camera's view plane
 	vec4 transformedShadowPosition = customShadowMatrices.projection * customShadowMatrices.view * vec4(vWorldPosition, 1);
 
+	// Convert the projected vector into a UV coordinate for image sampling
 	vec2 samplePosition = (transformedShadowPosition.xy / transformedShadowPosition.w) * 0.5 + 0.5;
 
+	// A temp variable for controlling whether to render shadow, or the default lighting
 	vec3 clippedLight = outgoingLight;
 
+	// Clip the sample position into a circle, which also ensures we aren't sampling points outside the shadow cameras frustum
 	if (distance(samplePosition, vec2(0.5, 0.5)) <= 0.5) {
-		vec4 sampledTexel = texture2D(customShadowMap, samplePosition.xy); // * 30.0;
-		float baseDistance = distance(vWorldPosition, customShadowPosition);
-		float sampledDepth = sampledTexel.r * 30.0; // (sampledTexel.x + sampledTexel.y * 0.1 + sampledTexel.z * 0.01) * 30.0;
+		// Sample the shadow map at the sample position
+		vec4 sampledTexel = texture2D(customShadowMap, samplePosition.xy);
 
+		// Get this distance from the fragment to the shadow camera
+		float baseDistance = distance(vWorldPosition, customShadowPosition);
+
+		// Convert the sampled color into a distance
+		float sampledDepth = sampledTexel.r * 30.0;
+
+		// If the fragment is closer to the camera than the sampled depth, render as shadow. We also add a bias to help with rounding errors
 		if (baseDistance - sampledDepth < 0.1) {
 			clippedLight = vec3(0, 0, 0);
 		}

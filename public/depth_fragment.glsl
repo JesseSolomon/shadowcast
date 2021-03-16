@@ -1,7 +1,5 @@
 in vec3 vWorldPosition;
 
-// #include <packing>
-
 void main() {
 	float dist = distance(vWorldPosition, cameraPosition) / 30.0;
 

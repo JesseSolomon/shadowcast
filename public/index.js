@@ -26,6 +26,7 @@
 		mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 	});
 
+	// Create the base scene
 	const mainCamera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.01, 100);
 	const shadowCamera = new THREE.PerspectiveCamera(35, 1, 0.01, 30);
 	const shadowTarget = new THREE.WebGLRenderTarget(512, 512, { format: THREE.RGBFormat });
@@ -51,18 +52,23 @@
     shadowCamera.updateMatrixWorld();
     shadowCamera.updateWorldMatrix();
 
+	// A custom material which uses THREE's default phong shader as a base for our custom lighting
 	const baseMaterial = new THREE.ShaderMaterial({
-		vertexShader: config.shaders[0],
-		fragmentShader: config.shaders[1],
+		vertexShader: config.shaders[0], // public/fx_vertex.glsl
+		fragmentShader: config.shaders[1], // public/fx_fragment.glsl
 		lights: true,
 		uniforms: {
+			// Include the default phong uniforms so we don't have to build all the lighting
 			...THREE.UniformsUtils.clone(THREE.ShaderLib.phong.uniforms),
+			// Points to a texture where each pixel is the distance to the fragment
 			customShadowMap: {
 				value: shadowTarget.texture
 			},
+			// The position of our shadowcast light
 			customShadowPosition: {
 				value: shadowCamera.position
 			},
+			// The matrices for projecting vectors into our shadow light
 			customShadowMatrices: {
 				value: {
 					projection: shadowCamera.projectionMatrix,
@@ -72,15 +78,18 @@
 		}
 	});
 
+	// A custom material for render depth as a texture
+	// THREE.js has one, but I couldn't get it to work
 	const depthMaterial = new THREE.ShaderMaterial({
 		vertexShader: config.shaders[2],
 		fragmentShader: config.shaders[3]
 	});
 
+	// A list of all THREE.Mesh objects in the scene, for swapping materials on the fly
 	const objectReference = [];
 
 	/**
-	 * Apply the shaders to every object in the scene
+	 * Index and update settings on every object in the scene
 	 * 
 	 * @param {THREE.Object3D} object
 	 */
@@ -108,9 +117,10 @@
 	 * Is called once per animation frame.
 	 */
 	function render() {
+		// Update user controls
 		controls.update();
 
-		shadowCamera.position.copy(mainCamera.position.clone().sub(new THREE.Vector3(0, 5, 0)).normalize().multiply(new THREE.Vector3(2, 2, 2)).add(new THREE.Vector3(0, 5, 0)));
+		shadowCamera.position.copy(mainCamera.position.clone().sub(new THREE.Vector3(0, 5, 0)).normalize().multiply(new THREE.Vector3(-2, -2, -2)).add(new THREE.Vector3(0, 5, 0)));
 
 		raycaster.setFromCamera(mouse, mainCamera);
 
@@ -120,15 +130,19 @@
 		
 		shadowCamera.updateWorldMatrix();
 
+		light.position.x = Math.sin(Date.now() / 1000);
+
+		// Set every object in the scene to use the `depthMaterial`
 		objectReference.forEach(obj => obj.material = depthMaterial);
 
+		// Render the shadow camera to get the depth texture
 		renderer.setRenderTarget(shadowTarget);
 		renderer.render(scene, shadowCamera);
 
+		// Set every object in the scene to use the `baseMaterial`
 		objectReference.forEach(obj => obj.material = baseMaterial);
 
-		light.position.x = Math.sin(Date.now() / 1000);
-
+		// Render the main camera
 		renderer.setRenderTarget(null);
 		renderer.render(scene, mainCamera);
 
